@@ -1,0 +1,112 @@
+name: Deploy Documentation
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install sphinx sphinx-rtd-theme sphinx-autodoc-typehints myst-parser
+      
+      - name: Build documentation
+        run: |
+          # Ensure docs directory exists
+          mkdir -p docs
+          # Create index.md with proper content
+          cat > docs/index.md << 'EOF'
+          # Medical Image Segmentation Benchmarking Framework
+          
+          Welcome to the Medical Image Segmentation Benchmarking Framework documentation.
+          
+          ## Quick Start
+          
+          See the [README](../README.md) for installation and usage instructions.
+          
+          ## Documentation
+          
+          - [Usage Guide](../USAGE.md)
+          - [Unified Usage](../UNIFIED_USAGE.md)
+          - [Examples](../EXAMPLES.md)
+          - [Contributing](../CONTRIBUTING.md)
+          - [Citation](../CITATION.md)
+          
+          ## Features
+          
+          - ✅ All 15 models from evolution sequence (2015-2025)
+          - 🧠 3D medical image support (ADAM dataset)
+          - ⏱️ Comprehensive timeout prevention
+          - 🔧 Memory management & error recovery
+          - 📊 Automatic progress tracking
+          - 🎨 Rich visualizations and reports
+          
+          ## Single Command Usage
+          
+          ```bash
+          # Quick test (2 models, ~5 minutes)
+          python unified_benchmark.py --data_path data/adam_dataset/raw --quick_test
+          
+          # Full benchmark (All 15 models, ~60 minutes)
+          python unified_benchmark.py --data_path data/adam_dataset/raw --all_models --max_time_minutes 60
+          ```
+          
+          ## Results
+          
+          The framework generates comprehensive results including:
+          - Model performance comparison charts
+          - Evolution timeline visualizations
+          - Training curves and metrics
+          - JSON results and HTML reports
+          EOF
+          
+          # Verify the file was created
+          if [ -f docs/index.md ]; then
+            echo "✅ Documentation created successfully"
+            ls -la docs/
+          else
+            echo "❌ Failed to create documentation"
+            exit 1
+          fi
+      
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: docs
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

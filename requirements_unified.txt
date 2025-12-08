@@ -1,0 +1,26 @@
+# Unified Medical Image Segmentation Benchmark Requirements
+# Core deep learning
+torch>=2.0.0
+torchvision>=0.15.0
+
+# Medical image processing
+nibabel>=3.2.2
+numpy>=1.21.0
+
+# Scientific computing
+scipy>=1.7.0
+scikit-learn>=1.0.0
+
+# Configuration and utilities
+omegaconf>=2.1.0
+pyyaml>=6.0
+
+# Progress and visualization
+rich>=13.0.0
+
+# System monitoring
+psutil>=5.8.0
+
+# Optional dependencies
+matplotlib>=3.5.0
+seaborn>=0.11.0

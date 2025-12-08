@@ -1,0 +1,140 @@
+# Medical Dataset Files (Large files + Privacy) - NEVER COMMIT
+*.nii
+*.nii.gz
+*.dcm
+*.dicom
+*.mhd
+*.raw
+*.img
+*.hdr
+*.mnc
+
+# Archive Files (Large files) - NEVER COMMIT
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+*.gz
+
+# Dataset Directories - Keep structure but exclude ALL data
+data/*/raw/*/
+data/*/processed/*/
+data/*/preprocessed/*/
+!data/*/raw/README.md
+!data/*/processed/README.md  
+!data/*/preprocessed/README.md
+
+# Explicitly ignore ADAM dataset data
+data/adam_dataset/raw/*/
+data/adam_dataset/processed/*/
+!data/adam_dataset/raw/README.md
+!data/adam_dataset/processed/README.md
+
+# ADAM dataset zip files (subject archives)
+data/ADAM_release_subjs/*.zip
+data/adam_dataset/**/*.zip
+
+# Model Checkpoints (Large files)
+*.pth
+*.ckpt
+*.pt
+*.safetensors
+checkpoints/
+saved_models/
+weights/
+experiments/
+models/checkpoints/
+lightning_logs/
+
+# Results and Outputs (Can be regenerated)
+results/
+outputs/ 
+predictions/
+visualizations/
+
+# Keep example benchmark results but ignore new ones
+benchmark_results/benchmark_results_*.json
+benchmark_results/benchmark_summary_*.txt
+benchmark_results/experiment_*
+benchmark_results/*.csv
+benchmark_results/*.xlsx
+
+# Images and plots (can be regenerated)
+*.png
+*.jpg
+*.jpeg
+*.svg
+*.pdf
+!docs/*.png
+!docs/*.jpg  
+!README_images/*.png
+!benchmark_results/README.md
+
+# Logs and Temporary Files
+logs/
+tmp/
+temp/
+cache/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# IDE and System Files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Environment Files
+.env
+.venv/
+venv/
+env/
+ENV/
+.conda/
+conda-meta/
+
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# Wandb (Experiment tracking)
+wandb/
+
+# GPU Memory Dumps
+*.dump
+
+# Configuration overrides (may contain paths)
+config_local.yaml
+config_override.yaml
+*_local.yaml
+
+# Backup files
+*.bak
+*.backup
+*.old

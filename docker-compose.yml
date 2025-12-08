@@ -1,0 +1,147 @@
+version: '3.8'
+
+services:
+  # Main benchmarking service
+  benchmark:
+    build:
+      context: .
+      target: production
+    image: medical-segmentation-benchmark:latest
+    container_name: medical-segmentation-benchmark
+    volumes:
+      - ./data:/app/data
+      - ./experiments:/app/experiments
+      - ./logs:/app/logs
+      - ./configs:/app/configs
+    environment:
+      - CUDA_VISIBLE_DEVICES=all
+      - PYTHONPATH=/app
+    command: ["python", "main.py", "--help"]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    networks:
+      - benchmark-network
+
+  # Development service
+  dev:
+    build:
+      context: .
+      target: development
+    image: medical-segmentation-benchmark:dev
+    container_name: medical-segmentation-benchmark-dev
+    volumes:
+      - .:/app
+      - ./data:/app/data
+      - ./experiments:/app/experiments
+      - ./logs:/app/logs
+    environment:
+      - CUDA_VISIBLE_DEVICES=all
+      - PYTHONPATH=/app
+    command: ["python", "main.py", "--help"]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    networks:
+      - benchmark-network
+
+  # Jupyter service
+  jupyter:
+    build:
+      context: .
+      target: jupyter
+    image: medical-segmentation-benchmark:jupyter
+    container_name: medical-segmentation-benchmark-jupyter
+    ports:
+      - "8888:8888"
+    volumes:
+      - .:/app
+      - ./data:/app/data
+      - ./experiments:/app/experiments
+      - ./logs:/app/logs
+    environment:
+      - CUDA_VISIBLE_DEVICES=all
+      - PYTHONPATH=/app
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    networks:
+      - benchmark-network
+
+  # TensorBoard service
+  tensorboard:
+    build:
+      context: .
+      target: production
+    image: medical-segmentation-benchmark:latest
+    container_name: medical-segmentation-benchmark-tensorboard
+    ports:
+      - "6006:6006"
+    volumes:
+      - ./experiments:/app/experiments
+      - ./logs:/app/logs
+    environment:
+      - PYTHONPATH=/app
+    command: ["tensorboard", "--logdir=/app/logs", "--host=0.0.0.0", "--port=6006"]
+    networks:
+      - benchmark-network
+
+  # Weights & Biases service
+  wandb:
+    build:
+      context: .
+      target: production
+    image: medical-segmentation-benchmark:latest
+    container_name: medical-segmentation-benchmark-wandb
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./experiments:/app/experiments
+      - ./logs:/app/logs
+    environment:
+      - PYTHONPATH=/app
+      - WANDB_MODE=offline
+    command: ["wandb", "server", "--port=8080", "--host=0.0.0.0"]
+    networks:
+      - benchmark-network
+
+  # Data processing service
+  data-processor:
+    build:
+      context: .
+      target: production
+    image: medical-segmentation-benchmark:latest
+    container_name: medical-segmentation-benchmark-data
+    volumes:
+      - ./data:/app/data
+      - ./experiments:/app/experiments
+      - ./logs:/app/logs
+    environment:
+      - PYTHONPATH=/app
+    command: ["python", "-c", "from data.utils import validate_dataset; validate_dataset('/app/data')"]
+    networks:
+      - benchmark-network
+
+networks:
+  benchmark-network:
+    driver: bridge
+
+volumes:
+  data:
+    driver: local
+  experiments:
+    driver: local
+  logs:
+    driver: local

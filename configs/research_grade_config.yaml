@@ -1,0 +1,245 @@
+# Medical Image Segmentation Benchmarking Configuration - RESEARCH-GRADE
+# Aligned with medical imaging standards (MICCAI, ISBI, etc.)
+
+# Dataset Configuration - RESEARCH-GRADE
+dataset:
+  name: "ADAM"
+  data_path: "/path/to/ADAM_release_subjs"
+  train_split: 0.7  # Standard 70% for medical datasets
+  val_split: 0.15   # 15% validation
+  test_split: 0.15  # 15% test
+  num_workers: 4    # Multi-threaded data loading
+  batch_size: 4     # Research-grade: 4-8 for 3D patches
+  patch_size: [96, 96, 96]  # Standard for 3D medical segmentation
+  overlap: 0.5      # 50% overlap for better coverage
+  max_subjects: null  # Use ALL subjects (research-grade)
+  max_patches_per_subject: 50  # More patches for robust training
+  pin_memory: true  # Enable for GPU performance
+  persistent_workers: true  # Faster epoch transitions
+
+# Data Augmentation - RESEARCH-GRADE
+augmentation:
+  enabled: true
+  rotation_range: 15
+  zoom_range: 0.1
+  brightness_range: 0.2
+  contrast_range: 0.2
+  elastic_deformation: true
+  elastic_alpha: 1000
+  elastic_sigma: 30
+  apply_probability: 0.8
+
+# Model Configuration - RESEARCH-GRADE
+models:
+  - name: "unet"
+    config:
+      in_channels: 1
+      out_channels: 1
+      base_features: 32  # Research-grade: 32-64
+      depth: 4
+      
+  - name: "unet3d"
+    config:
+      in_channels: 1
+      out_channels: 1
+      base_features: 32
+      depth: 4
+      
+  - name: "lightweight_unet3d"
+    config:
+      in_channels: 1
+      out_channels: 1
+      base_features: 16
+      depth: 3
+      dropout: 0.1
+      
+  - name: "attention_unet"
+    config:
+      in_channels: 1
+      out_channels: 1
+      base_features: 32
+      depth: 4
+      dropout: 0.1
+      
+  - name: "nnu_net"
+    config:
+      in_channels: 1
+      out_channels: 1
+      base_features: 32
+      depth: 5
+      
+  - name: "unetr"
+    config:
+      img_size: [96, 96, 96]
+      in_channels: 1
+      out_channels: 1
+      embed_dim: 768
+      patch_size: 16
+      num_heads: 12
+      num_layers: 12
+      mlp_ratio: 4.0
+      dropout: 0.1
+      
+  - name: "unetr_plus"
+    config:
+      img_size: [96, 96, 96]
+      in_channels: 1
+      out_channels: 1
+      embed_dim: 768
+      patch_size: [16, 16, 16]
+      num_heads: 12
+      num_layers: 12
+      mlp_ratio: 4.0
+      dropout: 0.1
+      
+  - name: "swin_unetr"
+    config:
+      img_size: [96, 96, 96]
+      in_channels: 1
+      out_channels: 1
+      depths: [2, 2, 2, 2]
+      num_heads: [3, 6, 12, 24]
+      feature_size: 48
+      norm_name: "instance"
+      drop_rate: 0.0
+      attn_drop_rate: 0.0
+      dropout_path_rate: 0.0
+      normalize: true
+      use_checkpoint: false
+      spatial_dims: 3
+      
+  - name: "primus"
+    config:
+      img_size: [96, 96, 96]
+      in_channels: 1
+      out_channels: 1
+      embed_dim: 384
+      patch_size: 8
+      num_heads: 6
+      depth: 6
+      
+  - name: "slim_unetr"
+    config:
+      img_size: [96, 96, 96]
+      in_channels: 1
+      out_channels: 1
+      embed_dim: 256
+      patch_size: 8
+      num_heads: 4
+      depth: 4
+      
+  - name: "es_unet"
+    config:
+      in_channels: 1
+      out_channels: 1
+      base_features: 32
+      depth: 4
+      
+  - name: "rwkv_unet"
+    config:
+      in_channels: 1
+      out_channels: 1
+      base_features: 32
+      depth: 4
+      
+  - name: "mamba_unet"
+    config:
+      in_channels: 1
+      out_channels: 1
+      base_features: 32
+      depth: 4
+      
+  - name: "stacked_unet"
+    config:
+      in_channels: 1
+      out_channels: 1
+      base_features: 32
+      depth: 4
+      num_stacks: 2
+      
+  - name: "multiscale_unet"
+    config:
+      in_channels: 1
+      out_channels: 1
+      base_features: 32
+      depth: 4
+      scales: [1, 0.5, 0.25]
+
+# Training Configuration - RESEARCH-GRADE
+training:
+  max_epochs: 200  # Research-grade: 100-300 with early stopping
+  learning_rate: 1e-4  # Standard: 1e-4 to 5e-4
+  weight_decay: 1e-5  # Standard for medical segmentation
+  scheduler: "cosine"  # Cosine annealing scheduler
+  warmup_epochs: 10  # Warmup epochs for stable training
+  gradient_clip_val: 1.0  # Gradient clipping for stability
+  accumulate_grad_batches: 1  # No gradient accumulation
+  precision: "16-mixed"  # Mixed precision for efficiency
+  patience: 20  # Early stopping patience (15-30 epochs)
+  lr_decay_factor: 0.5  # LR decay factor for step scheduler
+  lr_decay_patience: 10  # Epochs to wait before LR decay
+
+# Loss Configuration - RESEARCH-GRADE
+loss:
+  name: "dice_focal_tversky"  # Combined loss for extreme class imbalance
+  dice_weight: 0.2
+  focal_weight: 0.4
+  tversky_weight: 0.4
+  focal_alpha: 0.75  # Higher for sparse positive class
+  focal_gamma: 2.0
+  tversky_alpha: 0.7  # False negatives more important
+  smooth: 1e-5
+
+# Metrics Configuration - RESEARCH-GRADE
+metrics:
+  - name: "dice"
+  - name: "iou"
+  - name: "hausdorff_distance"
+  - name: "surface_distance"
+  - name: "volume_similarity"
+  - name: "sensitivity"
+  - name: "specificity"
+  - name: "precision"
+  - name: "f1_score"
+
+# Evaluation Configuration - RESEARCH-GRADE
+evaluation:
+  save_predictions: true
+  save_visualizations: true
+  threshold: 0.5  # Adaptive threshold for sparse predictions
+  post_process: true
+  use_full_validation: true  # No batch limits
+
+# Memory Management - RESEARCH-GRADE
+memory:
+  limit_ratio: 0.75  # Use max 75% of available memory
+  cleanup_frequency: 5  # Clean every 5 steps
+  force_cleanup: true
+
+# Timeout Prevention - RESEARCH-GRADE
+timeout:
+  max_total_time_minutes: 300  # 5 hours for full benchmark
+  max_model_time_minutes: 60  # 1 hour per model
+  max_batch_time_seconds: 30  # 30 seconds per batch
+  checkpoint_frequency: 10  # Save every 10 epochs
+
+# Logging Configuration - RESEARCH-GRADE
+logging:
+  project_name: "medical_segmentation_benchmark"
+  experiment_name: "adam_benchmark_research_grade"
+  log_dir: "./logs"
+  save_dir: "./checkpoints"
+  log_every_n_steps: 10
+  val_check_interval: 1.0
+
+# Hardware Configuration
+hardware:
+  gpus: 1
+  num_nodes: 1
+  strategy: "auto"
+
+# Reproducibility - RESEARCH-GRADE
+seed: 42
+deterministic: true
+benchmark: false  # Disable for reproducibility
+

@@ -1,0 +1,220 @@
+# Medical Image Segmentation Benchmarking Configuration
+
+# Dataset Configuration
+dataset:
+  name: "ADAM"
+  data_path: "/path/to/ADAM_release_subjs"
+  train_split: 0.8
+  val_split: 0.1
+  test_split: 0.1
+  num_workers: 4
+  batch_size: 4  # Research-grade: 4-8 for 3D patches
+  patch_size: [96, 96, 96]  # Standard for 3D medical (96-128)
+  overlap: 0.5
+  max_subjects: null  # Use all subjects (research-grade)
+  max_patches_per_subject: 50
+  
+# Data Augmentation
+augmentation:
+  enabled: true
+  rotation_range: 15
+  zoom_range: 0.1
+  brightness_range: 0.2
+  contrast_range: 0.2
+  elastic_deformation: true
+  elastic_alpha: 1000
+  elastic_sigma: 30
+
+# Model Configuration
+models:
+  - name: "unet"
+    config:
+      in_channels: 1
+      out_channels: 1
+      base_features: 32  # Research-grade: 32-64
+      depth: 4
+      
+  - name: "nnu_net"
+    config:
+      in_channels: 1
+      out_channels: 1
+      base_features: 32  # Research-grade: 32 for nnU-Net
+      depth: 5
+      
+  - name: "unetr"
+    config:
+      img_size: [96, 96, 96]  # Aligned with patch_size
+      in_channels: 1
+      out_channels: 1
+      embed_dim: 768
+      patch_size: 16
+      num_heads: 12
+      mlp_ratio: 4.0
+      qkv_bias: true
+      drop_rate: 0.0
+      attn_drop_rate: 0.0
+      drop_path_rate: 0.1
+      norm_layer: "LayerNorm"
+      patch_embed: "PatchEmbed"
+      pos_embed: "SincosPosEmbed"
+      norm_pix_loss: false
+      
+  - name: "swin_unetr"
+    config:
+      img_size: [96, 96, 96]  # Aligned with patch_size
+      in_channels: 1
+      out_channels: 1
+      depths: [2, 2, 2, 2]
+      num_heads: [3, 6, 12, 24]
+      feature_size: 48
+      norm_name: "instance"
+      drop_rate: 0.0
+      attn_drop_rate: 0.0
+      dropout_path_rate: 0.0
+      normalize: true
+      use_checkpoint: false
+      spatial_dims: 3
+      
+  # Advanced Transformer Models
+  - name: "primus"
+    config:
+      img_size: [96, 96, 96]  # Aligned with patch_size
+      in_channels: 1
+      out_channels: 1
+      embed_dim: 384
+      patch_size: 8
+      num_heads: 6
+      depth: 6
+      
+  - name: "slim_unetr"
+    config:
+      img_size: [96, 96, 96]  # Aligned with patch_size
+      in_channels: 1
+      out_channels: 1
+      embed_dim: 256
+      patch_size: 8
+      num_heads: 4
+      depth: 4
+      
+  - name: "unetr_plus"
+    config:
+      img_size: [96, 96, 96]  # Aligned with patch_size
+      in_channels: 1
+      out_channels: 1
+      embed_dim: 768
+      patch_size: [16, 16, 16]
+      num_heads: 12
+      num_layers: 12
+      mlp_ratio: 4.0
+      dropout: 0.1
+      
+  # Enhanced Models
+  - name: "es_unet"
+    config:
+      in_channels: 1
+      out_channels: 1
+      base_features: 32
+      depth: 4
+      
+  - name: "attention_unet"
+    config:
+      in_channels: 1
+      out_channels: 1
+      base_features: 32  # Research-grade: 32-64
+      depth: 4
+      dropout: 0.1
+      
+  # Next-Generation Models
+  - name: "rwkv_unet"
+    config:
+      in_channels: 1
+      out_channels: 1
+      base_features: 32
+      depth: 4
+      
+  - name: "mamba_unet"
+    config:
+      in_channels: 1
+      out_channels: 1
+      base_features: 32
+      depth: 4
+      
+  # Multi-Scale Models
+  - name: "stacked_unet"
+    config:
+      in_channels: 1
+      out_channels: 1
+      base_features: 32
+      depth: 4
+      num_stacks: 2
+      
+  - name: "multiscale_unet"
+    config:
+      in_channels: 1
+      out_channels: 1
+      base_features: 32
+      depth: 4
+      scales: [1, 0.5, 0.25]
+      
+  # Lightweight Models
+  - name: "lightweight_unet3d"
+    config:
+      in_channels: 1
+      out_channels: 1
+      base_features: 16  # Lightweight model (smaller is OK)
+      depth: 3
+      dropout: 0.1
+
+# Training Configuration
+training:
+  max_epochs: 200  # Research-grade: 100-300 with early stopping
+  learning_rate: 1e-4  # Standard: 1e-4 to 5e-4
+  weight_decay: 1e-5  # Standard for medical segmentation
+  scheduler: "cosine"  # Cosine annealing scheduler
+  warmup_epochs: 10  # Warmup epochs for stable training
+  gradient_clip_val: 1.0  # Gradient clipping for stability
+  accumulate_grad_batches: 1  # No gradient accumulation
+  precision: "16-mixed"  # Mixed precision for efficiency
+  patience: 20  # Early stopping patience (15-30 epochs)
+  
+# Loss Configuration
+loss:
+  name: "dice_ce"
+  dice_weight: 0.5
+  ce_weight: 0.5
+  smooth: 1e-5
+  
+# Metrics Configuration
+metrics:
+  - name: "dice"
+  - name: "iou"
+  - name: "hausdorff_distance"
+  - name: "surface_distance"
+  - name: "volume_similarity"
+
+# Evaluation Configuration
+evaluation:
+  save_predictions: true
+  save_visualizations: true
+  threshold: 0.5
+  post_process: true
+  
+# Logging Configuration
+logging:
+  project_name: "medical_segmentation_benchmark"
+  experiment_name: "adam_benchmark"
+  log_dir: "./logs"
+  save_dir: "./checkpoints"
+  log_every_n_steps: 10
+  val_check_interval: 1.0
+  
+# Hardware Configuration
+hardware:
+  gpus: 1
+  num_nodes: 1
+  strategy: "auto"
+  
+# Reproducibility
+seed: 42
+deterministic: true
+benchmark: false

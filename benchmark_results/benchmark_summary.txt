@@ -1,0 +1,13 @@
+Medical Image Segmentation Benchmark Results
+==================================================
+
+Dataset: 113 valid subjects
+Subjects with aneurysms: 113
+
+Model Results:
+------------------------------
+unet                 | Dice: 0.2116 | Time: 1684.3min
+
+Best Model: unet
+Best Dice Score: 0.2116
+Models Completed: 1/1

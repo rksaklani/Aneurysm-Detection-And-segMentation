@@ -1,0 +1,270 @@
+# Medical Image Segmentation Benchmarking Configuration - SERVER OPTIMIZED
+
+# Dataset Configuration - ULTRA-OPTIMIZED FOR TIMEOUT PREVENTION
+dataset:
+  name: "ADAM"
+  data_path: "/path/to/ADAM_release_subjs"
+  train_split: 0.8
+  val_split: 0.1
+  test_split: 0.1
+  num_workers: 1      # Single worker to prevent resource conflicts
+  batch_size: 1       # Keep at 1 for safety
+  patch_size: [32, 32, 32]  # VERY small patches for speed
+  overlap: 0.0        # No overlap for maximum speed
+  load_patches: true
+  cache_patches: false
+  max_patches_per_subject: 10   # SEVERELY limited patches
+  max_subjects: 5     # Process only 5 subjects total
+  shuffle_data: false # Disable shuffling to save time
+  pin_memory: false   # Disable pin memory to save resources
+  drop_last: true     # Drop incomplete batches
+  persistent_workers: false  # Don't persist workers
+  prefetch_factor: 1  # Minimal prefetching
+  
+# Data Augmentation - LIGHTWEIGHT
+augmentation:
+  enabled: false  # Disabled to avoid ndimage issues
+  rotation_range: 10  # Reduced from 15
+  translation_range: 0.05  # Reduced from 0.1
+  scale_range: [0.95, 1.05]  # Reduced range
+  brightness_range: 0.1  # Reduced from 0.2
+  contrast_range: 0.1  # Reduced from 0.2
+  elastic_deformation: false  # Disabled to save computation
+  apply_probability: 0.5  # Apply augmentation only 50% of the time
+
+# Preprocessing - OPTIMIZED
+preprocessing:
+  normalize_method: "z_score"
+  bias_correction: false  # Disabled to save computation
+  noise_reduction: false  # Disabled to save computation
+  resample: false  # Disabled to save computation
+  target_spacing: [1.0, 1.0, 1.0]
+
+# Model Configuration - LIGHTWEIGHT MODELS
+models:
+  - name: "unet"
+    config:
+      in_channels: 1
+      out_channels: 1
+      base_features: 16  # Reduced from 32
+      depth: 3  # Keep depth at 3
+      dropout: 0.1
+      
+  - name: "unetr"
+    config:
+      img_size: [64, 64, 64]  # Reduced from 128
+      in_channels: 1
+      out_channels: 1
+      embed_dim: 384  # Reduced from 768
+      patch_size: 8  # Reduced from 16
+      num_heads: 6  # Reduced from 12
+      mlp_ratio: 2.0  # Reduced from 4.0
+      qkv_bias: true
+      drop_path: 0.1  # Fixed parameter name
+      attn_drop_rate: 0.1
+      drop_path_rate: 0.1
+      norm_layer: "LayerNorm"
+      patch_embed: "PatchEmbed"
+      pos_embed: "SincosPosEmbed"
+      norm_pix_loss: false
+      
+  - name: "swin_unetr"
+    config:
+      img_size: [64, 64, 64]  # Reduced from 128
+      in_channels: 1
+      out_channels: 1
+      depths: [2, 2, 2]  # Reduced from [2, 2, 2, 2]
+      num_heads: [3, 6, 12]  # Reduced from [3, 6, 12, 24]
+      feature_size: 24  # Reduced from 48
+      norm_name: "instance"
+      drop_rate: 0.1
+      attn_drop_rate: 0.1
+      dropout_path_rate: 0.1
+      normalize: true
+      use_checkpoint: true  # Enable gradient checkpointing
+      spatial_dims: 3
+      
+  # ULTRA-LIGHTWEIGHT TRANSFORMER MODELS (Timeout-Safe)
+  - name: "primus"
+    config:
+      img_size: [32, 32, 32]  # Very small for timeout prevention
+      in_channels: 1
+      out_channels: 1
+      embed_dim: 128  # Much smaller than standard 384
+      patch_size: 4   # Smaller patches
+      num_heads: 2    # Minimal heads
+      depth: 2        # Shallow depth
+      
+  - name: "slim_unetr"
+    config:
+      img_size: [32, 32, 32]  # Very small
+      in_channels: 1
+      out_channels: 1
+      embed_dim: 64   # Extremely lightweight
+      patch_size: 4
+      num_heads: 2
+      depth: 2
+      
+  - name: "unetr_plus"
+    config:
+      img_size: [32, 32, 32]
+      in_channels: 1
+      out_channels: 1
+      embed_dim: 192  # Much reduced
+      patch_size: [4, 4, 4]
+      num_heads: 3    # Minimal
+      num_layers: 3   # Shallow
+      mlp_ratio: 2.0  # Reduced
+      dropout: 0.2
+      
+  # ENHANCED MODELS (Memory-Optimized)
+  - name: "es_unet"
+    config:
+      in_channels: 1
+      out_channels: 1
+      base_features: 8   # Very small
+      depth: 2           # Shallow
+      
+  - name: "attention_unet"
+    config:
+      in_channels: 1
+      out_channels: 1
+      base_features: 8   # Very small
+      depth: 2           # Shallow
+      dropout: 0.2
+      
+  # NEXT-GENERATION MODELS (Simplified for Server)
+  - name: "rwkv_unet"
+    config:
+      in_channels: 1
+      out_channels: 1
+      base_features: 8   # Minimal features
+      depth: 2           # Shallow
+      
+  - name: "mamba_unet"
+    config:
+      in_channels: 1
+      out_channels: 1
+      base_features: 8   # Minimal features
+      depth: 2           # Shallow
+      
+  # MULTI-SCALE MODELS (Ultra-Lightweight)
+  - name: "stacked_unet"
+    config:
+      in_channels: 1
+      out_channels: 1
+      base_features: 4   # Extremely small
+      depth: 2           # Very shallow
+      num_stacks: 2      # Keep stacking but small models
+      
+  - name: "multiscale_unet"
+    config:
+      in_channels: 1
+      out_channels: 1
+      base_features: 4   # Extremely small
+      depth: 2           # Very shallow
+      scales: [1, 0.5]   # Reduced scales
+      
+  # LIGHTWEIGHT MODELS (Already optimal)
+  - name: "lightweight_unet3d"
+    config:
+      in_channels: 1
+      out_channels: 1
+      base_features: 8   # Even smaller
+      depth: 2           # Shallow
+      dropout: 0.2
+
+# Training Configuration - ULTRA-OPTIMIZED FOR TIMEOUT PREVENTION
+training:
+  max_epochs: 10  # SEVERELY reduced to prevent timeouts
+  learning_rate: 5e-4  # Higher for faster convergence
+  weight_decay: 1e-4
+  scheduler: "cosine"
+  warmup_epochs: 1  # Minimal warmup
+  gradient_clip_val: 0.5  # Smaller clips
+  accumulate_grad_batches: 4  # Higher accumulation, smaller per-step compute
+  precision: "16-mixed"  # Essential for memory
+  val_check_interval: 1.0  # Less frequent validation
+  log_every_n_steps: 10  # Less frequent logging
+  limit_train_batches: 0.1  # Use only 10% of training data (!)
+  limit_val_batches: 0.1   # Use only 10% of validation data (!)
+  limit_test_batches: 0.1  # Limit test data too
+  fast_dev_run: false      # Don't enable fast dev run
+  max_steps: 50            # Hard limit on steps per epoch
+  timeout_prevention: true  # Custom flag for timeout handling
+  
+# Loss Configuration
+loss:
+  name: "dice_ce"
+  dice_weight: 0.7  # Increased dice weight
+  ce_weight: 0.3  # Reduced CE weight
+  smooth: 1e-5
+  
+# Metrics Configuration - ESSENTIAL METRICS ONLY
+metrics:
+  - name: "dice"
+  - name: "iou"
+  - name: "hausdorff_distance"
+  - name: "surface_distance"
+
+# Evaluation Configuration - MINIMAL (Timeout Prevention)
+evaluation:
+  save_predictions: false     # Disabled
+  save_visualizations: false  # Disabled
+  threshold: 0.5
+  post_process: false        # Disabled
+  max_eval_samples: 3        # Only 3 samples for eval
+  skip_test_epoch: true      # Skip testing during training
+  minimal_validation: true    # Bare minimum validation
+  compute_metrics: false     # Skip complex metric computation
+  quick_eval_mode: true      # Enable fastest evaluation
+  
+# Logging Configuration - MINIMAL
+logging:
+  project_name: "medical_segmentation_benchmark"
+  experiment_name: "adam_benchmark_server"
+  log_dir: "./logs"
+  save_dir: "./checkpoints"
+  log_every_n_steps: 5  # Reduced logging frequency
+  val_check_interval: 0.5
+  save_top_k: 1  # Save only best model
+  
+# Hardware Configuration - SERVER OPTIMIZED
+hardware:
+  gpus: 1
+  num_nodes: 1
+  strategy: "auto"
+  find_unused_parameters: false  # Optimize for single GPU
+  
+# AGGRESSIVE Memory Management - TIMEOUT PREVENTION
+memory:
+  empty_cache_frequency: 5   # Clear cache every 5 steps (more frequent)
+  max_memory_usage: 0.6      # Use max 60% of available memory (safer)
+  monitor_memory: true
+  cleanup_frequency: 2       # Cleanup every 2 steps (very frequent)
+  force_gc_frequency: 3      # Force garbage collection every 3 steps
+  clear_cache_on_epoch: true # Clear cache at end of each epoch
+  memory_fraction: 0.5       # Reserve only 50% GPU memory
+  
+# TIMEOUT Prevention Settings
+timeout_prevention:
+  enabled: true
+  max_batch_time_seconds: 20      # Max 20 seconds per batch
+  max_epoch_time_minutes: 5       # Max 5 minutes per epoch  
+  max_model_init_seconds: 30      # Max 30 seconds to initialize model
+  checkpoint_every_n_batches: 5   # Save progress frequently
+  early_stop_on_timeout: true     # Stop training if approaching timeout
+  
+# ULTRA-LIGHTWEIGHT Processing
+processing:
+  reduce_precision: true          # Use lower precision where possible
+  skip_non_essential_logs: true   # Skip detailed logging
+  minimal_metrics: true           # Compute only essential metrics
+  disable_progress_bar: true      # Reduce I/O overhead
+  sync_batchnorm: false          # Disable sync batch norm
+  benchmark_mode: false          # Disable CUDNN benchmark
+  
+# Reproducibility
+seed: 42
+deterministic: true
+benchmark: false  # Disable for reproducibility
