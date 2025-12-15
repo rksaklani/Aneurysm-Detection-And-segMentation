@@ -130,7 +130,7 @@ jobs:
         twine check dist/*
     
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: dist
         path: dist/
@@ -191,7 +191,7 @@ jobs:
         semgrep --config=auto data/ models/ training/ evaluation/ utils/ unified_benchmark.py --json --output=semgrep-report.json || echo "Semgrep scan completed with warnings" || true
     
     - name: Upload security reports
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: security-reports
         path: |
