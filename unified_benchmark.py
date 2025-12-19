@@ -192,16 +192,42 @@ def _has_subject_dirs(path: Path) -> bool:
     return False
 
 
+def _has_mra_structure(path: Path) -> bool:
+    """Return True if the path has the new MRA structure (images/ and masks/ directories)."""
+    try:
+        images_dir = path / "images"
+        masks_dir = path / "masks"
+        return images_dir.exists() and images_dir.is_dir() and masks_dir.exists() and masks_dir.is_dir()
+    except (FileNotFoundError, OSError):
+        return False
+
+
 def resolve_dataset_path(data_path: Path) -> Tuple[Path, Optional[str]]:
     """
     Resolve the actual dataset directory.
     
     Handles common cases where the ADAM dataset ships as zip files or is extracted
     to sibling directories (e.g., data/adam_dataset/raw).
+    Also supports the new MRA structure (data/MRA with images/ and masks/ directories).
     """
     if not data_path.exists():
         return data_path, f"Dataset path does not exist: {data_path}"
 
+    # Check for new MRA structure first (images/ and masks/ directories)
+    if _has_mra_structure(data_path):
+        return data_path, "Detected MRA structure (images/ and masks/ directories)"
+    
+    # Check for MRA structure in common locations
+    candidate_mra_paths = [
+        data_path / "MRA",
+        data_path.parent / "MRA",
+        data_path.parent / "data" / "MRA",
+    ]
+    for candidate in candidate_mra_paths:
+        if candidate.exists() and _has_mra_structure(candidate):
+            return candidate, f"Detected MRA structure at: {candidate}"
+
+    # Check for old structure with subject directories
     if _has_subject_dirs(data_path):
         return data_path, None
 
@@ -235,7 +261,7 @@ def resolve_dataset_path(data_path: Path) -> Tuple[Path, Optional[str]]:
         if _has_subject_dirs(extracted_root):
             return extracted_root, f"Extracted zip subjects to {extracted_root}"
 
-    return data_path, "Dataset path exists but contains no subject directories; check structure."
+    return data_path, "Dataset path exists but contains no subject directories or MRA structure; check structure."
 
 
 def get_subject_base_dir(subject_path: Path) -> Path:
@@ -425,6 +451,8 @@ def validate_adam_dataset(data_path: str) -> Tuple[bool, List[str], Dict[str, An
     """
     Validate ADAM dataset structure and return subject information.
     
+    Supports both old structure (subject directories) and new MRA structure (images/ and masks/).
+    
     Returns:
         (is_valid, subject_list, dataset_info)
     """
@@ -433,14 +461,19 @@ def validate_adam_dataset(data_path: str) -> Tuple[bool, List[str], Dict[str, An
     if not data_path.exists():
         return False, [], {"error": f"Dataset path does not exist: {data_path}"}
     
-    # Find all subject directories
+    # Check for new MRA structure (images/ and masks/ directories)
+    if _has_mra_structure(data_path):
+        return _validate_mra_dataset(data_path)
+    
+    # Old structure: Find all subject directories
     subjects = []
     valid_subjects = []
     dataset_info = {
         "total_subjects": 0,
         "valid_subjects": 0,
         "subjects_with_aneurysms": 0,
-        "missing_files": []
+        "missing_files": [],
+        "structure_type": "old"
     }
     
     for subject_dir in data_path.iterdir():
@@ -481,6 +514,75 @@ def validate_adam_dataset(data_path: str) -> Tuple[bool, List[str], Dict[str, An
                 "subject": subject_dir.name,
                 "missing": missing
             })
+    
+    dataset_info["total_subjects"] = len(subjects)
+    dataset_info["valid_subjects"] = len(valid_subjects)
+    
+    is_valid = len(valid_subjects) >= 3  # Need at least 3 subjects for train/val/test
+    
+    return is_valid, sorted(valid_subjects), dataset_info
+
+
+def _validate_mra_dataset(data_path: Path) -> Tuple[bool, List[str], Dict[str, Any]]:
+    """
+    Validate the new MRA dataset structure (images/ and masks/ directories).
+    
+    Returns:
+        (is_valid, subject_list, dataset_info)
+    """
+    images_dir = data_path / "images"
+    masks_dir = data_path / "masks"
+    
+    if not images_dir.exists() or not masks_dir.exists():
+        return False, [], {"error": f"MRA structure incomplete: missing images/ or masks/ directory"}
+    
+    # Find all image files (img_XXXX.nii.gz)
+    image_files = sorted(images_dir.glob("img_*.nii*"))
+    
+    subjects = []
+    valid_subjects = []
+    dataset_info = {
+        "total_subjects": 0,
+        "valid_subjects": 0,
+        "subjects_with_aneurysms": 0,
+        "missing_files": [],
+        "structure_type": "mra"
+    }
+    
+    for img_file in image_files:
+        # Extract subject ID from filename (e.g., "img_0001" from "img_0001.nii.gz")
+        # Handle both "img_0001.nii.gz" and "img_0001.nii" formats
+        subject_id = img_file.stem
+        if subject_id.endswith(".nii"):
+            subject_id = subject_id[:-4]  # Remove ".nii" if present
+        
+        # Ensure consistent format: "img_XXXX" where XXXX is zero-padded
+        if not subject_id.startswith("img_"):
+            continue  # Skip files that don't match expected pattern
+        
+        subjects.append(subject_id)
+        
+        # Find corresponding mask file
+        mask_name = img_file.name.replace("img_", "mask_")
+        mask_file = masks_dir / mask_name
+        
+        if not mask_file.exists():
+            dataset_info["missing_files"].append({
+                "subject": subject_id,
+                "missing": ["mask"]
+            })
+            continue
+        
+        # Check if mask has non-zero values (has aneurysms)
+        try:
+            mask_data = nib.load(str(mask_file)).get_fdata()
+            if np.any(mask_data > 0):
+                dataset_info["subjects_with_aneurysms"] += 1
+        except Exception:
+            pass
+        
+        # Both image and mask exist
+        valid_subjects.append(subject_id)
     
     dataset_info["total_subjects"] = len(subjects)
     dataset_info["valid_subjects"] = len(valid_subjects)
@@ -605,26 +707,57 @@ class UnifiedADAMDataset(Dataset):
         log_message(f"Dataset initialized: {len(self.patches)} patches from {len(self.subject_data)} subjects")
     
     def _load_subject_data(self) -> Dict[str, Dict[str, str]]:
-        """Load subject file paths."""
+        """Load subject file paths. Supports both old and new MRA structures."""
         subject_data = {}
         
-        for subject_id in self.subjects:
-            subject_path = self.data_path / subject_id
-            
-            if not subject_path.exists():
-                continue
-            
-            subject_base = get_subject_base_dir(subject_path)
-            
-            # Find files - ONLY use TOF (matches aneurysm mask dimensions)
-            tof_file = self._find_file(subject_base, ["*TOF*.nii*", "*tof*.nii*"])
-            mask_file = self._find_file(subject_base, ["aneurysms.nii*", "*aneurysm*.nii*"], check_root=True)
-            
-            if tof_file:  # Only need TOF file
-                subject_data[subject_id] = {
-                    "tof": str(tof_file),
-                    "mask": str(mask_file) if mask_file else None
-                }
+        # Check if this is the new MRA structure
+        images_dir = self.data_path / "images"
+        masks_dir = self.data_path / "masks"
+        is_mra_structure = images_dir.exists() and masks_dir.exists()
+        
+        if is_mra_structure:
+            # New MRA structure: images/img_XXXX.nii.gz and masks/mask_XXXX.nii.gz
+            for subject_id in self.subjects:
+                # Subject ID should be in format "img_XXXX" from validation
+                # Try .nii.gz first, then .nii
+                img_name_gz = f"{subject_id}.nii.gz"
+                img_name = f"{subject_id}.nii"
+                
+                img_file = images_dir / img_name_gz
+                if not img_file.exists():
+                    img_file = images_dir / img_name
+                
+                if img_file.exists():
+                    # Find corresponding mask file
+                    mask_name_gz = img_name_gz.replace("img_", "mask_")
+                    mask_name = img_name.replace("img_", "mask_")
+                    mask_file = masks_dir / mask_name_gz
+                    if not mask_file.exists():
+                        mask_file = masks_dir / mask_name
+                    
+                    subject_data[subject_id] = {
+                        "tof": str(img_file),
+                        "mask": str(mask_file) if mask_file.exists() else None
+                    }
+        else:
+            # Old structure: subject directories with nested files
+            for subject_id in self.subjects:
+                subject_path = self.data_path / subject_id
+                
+                if not subject_path.exists():
+                    continue
+                
+                subject_base = get_subject_base_dir(subject_path)
+                
+                # Find files - ONLY use TOF (matches aneurysm mask dimensions)
+                tof_file = self._find_file(subject_base, ["*TOF*.nii*", "*tof*.nii*"])
+                mask_file = self._find_file(subject_base, ["aneurysms.nii*", "*aneurysm*.nii*"], check_root=True)
+                
+                if tof_file:  # Only need TOF file
+                    subject_data[subject_id] = {
+                        "tof": str(tof_file),
+                        "mask": str(mask_file) if mask_file else None
+                    }
         
         return subject_data
     
